@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesa de Cambio & Divisas - Control Operativo Pro</title>
+    <!-- Etiquetas PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#090d16">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <style>
+        :root {
+            --bg-base: #090d16;
+            --bg-card: #111827;
+            --border-color: #1f2937;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --accent-amber: #f59e0b;
+            --accent-purple: #a855f7;
+            --accent-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: var(--bg-base); color: var(--text-main); min-height: 100vh; padding-bottom: 40px; }
+
+        header {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 30;
+        }
+        .header-content { max-width: 440px; margin: 0 auto; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+
+        main { max-width: 440px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+        /* Vistas tipo Página Independiente */
+        .page-view { display: none; flex-direction: column; gap: 16px; animation: fadeIn 0.25s ease-in-out; }
+        .page-view.active { display: flex; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Botón de Retorno */
+        .btn-back { background: var(--border-color); color: var(--text-main); border: none; border-radius: 10px; padding: 10px 14px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; width: fit-content; transition: background 0.2s; }
+        .btn-back:hover { background: #374151; }
+
+        /* Tarjetas del Menú Principal (Home Launcher) */
+        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        .menu-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 18px; padding: 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+        .menu-card:hover { border-color: var(--accent-blue); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(59, 130, 246, 0.15); }
+        .menu-card-info h3 { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+        .menu-card-info p { font-size: 11px; color: var(--text-muted); }
+        .menu-card-icon { font-size: 24px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 12px; border-radius: 14px; }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); position: relative; }
+        .card.warning { border-color: var(--accent-red); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
+        .card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .card-value { font-size: 18px; font-weight: 900; letter-spacing: -0.5px; }
+        .card-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+        /* Banner de Tasa Base */
+        .rates-banner { background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid var(--accent-blue); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+        
+        /* Sub-pestañas operativas dentro de páginas */
+        .tabs { display: flex; gap: 4px; background: var(--bg-card); padding: 4px; border-radius: 12px; border: 1px solid var(--border-color); overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 10px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; border: none; background: transparent; color: var(--text-muted); cursor: pointer; transition: all 0.2s; white-space: nowrap; text-align: center; }
+        .tab-btn.active { background: var(--accent-blue); color: white; }
+
+        .section-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+        .section-title { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+
+        .input-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+        input, select { background: #030712; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; color: white; font-size: 14px; font-weight: 600; outline: none; transition: border-color 0.2s; width: 100%; }
+        input:focus, select:focus { border-color: var(--accent-green); }
+
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+        .result-box { background: #030712; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #cbd5e1; }
+
+        .btn-main { background: var(--accent-green); color: white; border: none; border-radius: 12px; padding: 14px; font-size: 13px; font-weight: 700; cursor: pointer; width: 100%; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); transition: opacity 0.2s; text-decoration: none; text-align: center; display: inline-block; }
+        .btn-main:hover { opacity: 0.9; }
+        .btn-danger { background: var(--accent-red); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+        .btn-income { background: var(--accent-blue); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .btn-whatsapp { background: #25d366; color: white; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3); }
+
+        #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; display: flex; flex-direction: column; gap: 8px; width: 90%; max-width: 400px; pointer-events: none; }
+        .toast { background: #1e293b; border: 1px solid var(--accent-green); color: white; padding: 12px 16px; border-radius: 12px; font-size: 12px; font-weight: 600; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease; transform: translateY(10px); pointer-events: auto; display: flex; align-items: center; gap: 10px; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.error { border-color: var(--accent-red); background: #2b1117; }
+
+        .history-container { display: flex; flex-direction: column; gap: 8px; max-height: 500px; overflow-y: auto; padding-right: 4px; }
+        .history-item { background: #030712; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+        
+        .sub-pane { display: none; flex-direction: column; gap: 14px; }
+        .sub-pane.active { display: flex; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <header>
+        <div class="header-content">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 8px; border-radius: 10px; color: var(--accent-green);">
+                    💶
+                </div>
+                <div>
+                    <h1 style="font-size: 13px; font-weight: 700;">Mesa de Divisas FP</h1>
+                    <p style="font-size: 10px; color: var(--text-muted);">Control Operativo Pro</p>
+                </div>
+            </div>
+            <span style="font-size: 10px; font-weight: 600; background: rgba(16, 185, 129, 0.1); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 10px; border-radius: 99px;">🟢 Activo</span>
+        </div>
+    </header>
+
+    <main>
+        <!-- ================= PÁGINA 1: MENÚ PRINCIPAL (LAUNCHER) ================= -->
+        <div id="pageHome" class="page-view active">
+            <!-- Banner de Tasa Base Rápida -->
+            <section class="rates-banner">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(59, 130, 246, 0.3); padding-bottom: 6px;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--accent-blue); text-transform: uppercase;">⚡ Tasa Base del Día</span>
+                    <button onclick="actualizarTasaDia()" style="background: var(--accent-blue); border: none; color: white; padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; cursor: pointer;">Guardar</button>
+                </div>
+                <div class="input-group" style="margin-top: 4px;">
+                    <input type="number" step="1" id="tasaBaseDia" value="1040" style="padding: 8px; font-size: 13px;">
+                </div>
+            </section>
+
+            <!-- Resumen Rápido de Saldos -->
+            <section class="dashboard-grid">
+                <div class="card" id="cardEfectivo">
+                    <div class="card-title" style="color: var(--accent-green);">💵 Efectivo ($)</div>
+                    <p id="totalEfectivo" class="card-value">$0.00</p>
+                </div>
+                <div class="card" id="cardZelle">
+                    <div class="card-title" style="color: var(--accent-blue);">💳 Zelle / Banco</div>
+                    <p id="totalZelle" class="card-value">$0.00</p>
+                </div>
+                <div class="card" id="cardUsdt">
+                    <div class="card-title" style="color: var(--accent-amber);">🪙 USDT Disp.</div>
+                    <p id="totalUsdt" class="card-value" style="color: var(--accent-amber);">0.00</p>
+                </div>
+                <div class="card" id="cardBolivares">
+                    <div class="card-title" style="color: #ec4899;">🇻🇪 Bolívares (VES)</div>
+                    <p id="totalBolivares" class="card-value" style="color: #ec4899;">Bs. 0.00</p>
+                    <p id="equivDolares" class="card-sub">Eq: $0.00</p>
+                </div>
+                <div class="card" style="grid-column: span 2; background: linear-gradient(135deg, #1e1b4b, #111827);">
+                    <div class="card-title" style="color: var(--accent-purple);">📈 Ganancias (Día & Acumulado)</div>
+                    <p id="totalGanancia" class="card-value" style="color: var(--accent-purple);">Bs. 0.00 <span style="font-size: 11px; color: var(--text-muted);">($0.00)</span></p>
+                    <p id="gananciaSemanal" class="card-sub" style="color: #c084fc;">Semanal: Bs. 0.00 ($0.00)</p>
+                </div>
+            </section>
+
+            <!-- Botonera de Módulos (Páginas Independientes) -->
+            <div class="menu-grid" style="margin-top: 5px;">
+                <div class="menu-card" onclick="cambiarPagina('pageDivisas')">
+                    <div class="menu-card-info">
+                        <h3>💱 Mesa de Divisas</h3>
+                        <p>Compra/Venta, Giros Zelle y USDT Pro</p>
+                    </div>
+                    <div class="menu-card-icon" style="color: var(--accent-blue);">➡️</div>
+                </div>
+
+                <div class="menu-card" onclick="cambiarPagina('pageCaja')">
+                    <div class="menu-card-info">
+                        <h3>⚙️ Caja & Ajustes</h3>
+                        <p>Entradas, Retiros, Fiados y Arqueo de Saldos</p>
+                    </div>
+                    <div class="menu-card-icon" style="color: var(--accent-green);">➡️</div>
+                </div>
+
+                <div class="menu-card" onclick="cambiarPagina('pageCierre')">
+                    <div class="menu-card-info">
+                        <h3>📋 Cierre de Caja & WhatsApp</h3>
+                        <p>Cuadre diario, reporte y consolidación semanal</p>
+                    </div>
+                    <div class="menu-card-icon" style="color: var(--accent-purple);">➡️</div>
+                </div>
+
+                <div class="menu-card" onclick="cambiarPagina('pageHistorial')">
+                    <div class="menu-card-info">
+                        <h3>📜 Bitácora de Movimientos</h3>
+                        <p>Historial detallado de todas las operaciones</p>
+                    </div>
+                    <div class="menu-card-icon" style="color: var(--accent-amber);">➡️</div>
+                </div>
+
+                <!-- Espacio para tu futuro módulo -->
+                <div class="menu-card" onclick="cambiarPagina('pageFuturo')" style="border-style: dashed; opacity: 0.7;">
+                    <div class="menu-card-info">
+                        <h3>🚀 Próximo Módulo</h3>
+                        <p>Espacio reservado para futuras funciones</p>
+                    </div>
+                    <div class="menu-card-icon" style="color: var(--text-muted);">➕</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= PÁGINA 2: MESA DE DIVISAS ================= -->
+        <div id="pageDivisas" class="page-view">
+            <button class="btn-back" onclick="cambiarPagina('pageHome')">⬅️ Volver al Menú</button>
+            
+            <div class="tabs">
+                <button onclick="mostrarSubDivisa('cv')" id="tabCv" class="tab-btn active">🔄 Compra/Venta</button>
+                <button onclick="mostrarSubDivisa('giros')" id="tabGiros" class="tab-btn">🌐 Giros Zelle</button>
+                <button onclick="mostrarSubDivisa('usdt')" id="tabUsdt" class="tab-btn">🪙 USDT Pro</button>
+            </div>
+
+            <!-- Sub-módulo: Compra/Venta -->
+            <section id="paneCv" class="section-box sub-pane active">
+                <div class="section-title">🔄 <span>Mesa de Compra / Venta</span></div>
+                <div class="input-group">
+                    <label>Tipo de Operación</label>
+                    <select id="cvTipo" onchange="calcularCV()">
+                        <option value="compra">Comprar Dólares (Compras barato)</option>
+                        <option value="venta" selected>Vender Dólares (Colocas caro)</option>
+                    </select>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Tasa de la Operación</label>
+                        <input type="number" step="1" id="cvTasaOperacion" value="1060" oninput="calcularCV()">
+                    </div>
+                    <div class="input-group">
+                        <label>Cantidad de Dólares ($)</label>
+                        <input type="number" step="1" id="cvMonto" value="100" oninput="calcularCV()">
+                    </div>
+                </div>
+                <div id="cvResultados" class="result-box"></div>
+                <button onclick="ejecutarCompraVenta()" class="btn-main">Ejecutar Operación</button>
+            </section>
+
+            <!-- Sub-módulo: Giros Zelle -->
+            <section id="paneGiros" class="section-box sub-pane">
+                <div class="section-title">🌐 <span>Giros Zelle (Enviar y Recibir)</span></div>
+                <div class="input-group">
+                    <label>Dirección del Giro</label>
+                    <select id="giroDireccion" onchange="calcularGiros()">
+                        <option value="recibir">Recibir Zelle ➔ Retira Físico</option>
+                        <option value="enviar">Entrega Físico ➔ Envía Zelle</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Monto Base ($)</label>
+                    <input type="number" step="10" id="giroMonto" value="1000" oninput="calcularGiros()">
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Comisión Total (%)</label>
+                        <input type="number" step="0.5" id="giroComisionTotal" value="8" oninput="calcularGiros()">
+                    </div>
+                    <div class="input-group">
+                        <label>Tu Parte (%)</label>
+                        <input type="number" step="0.5" id="giroComisionPropia" value="5" oninput="calcularGiros()">
+                    </div>
+                </div>
+                <div id="girosResultados" class="result-box" style="border-color: rgba(59, 130, 246, 0.3);"></div>
+                <button onclick="ejecutarGiroBilaterals()" class="btn-main" style="background: var(--accent-blue);">Registrar Giro Zelle</button>
+            </section>
+
+            <!-- Sub-módulo: USDT Pro -->
+            <section id="paneUsdt" class="section-box sub-pane">
+                <div class="section-title">🪙 <span>Módulo USDT Pro</span></div>
+                <div class="input-group">
+                    <label>Tipo de Operación USDT</label>
+                    <select id="usdtTipoOp" onchange="calcularUSDTPro()">
+                        <option value="cliente_da_fisico">Cliente da Efectivo ($) ➔ Recibe USDT</option>
+                        <option value="cliente_da_usdt">Cliente da USDT ➔ Recibe Efectivo</option>
+                    </select>
+                </div>
+                <div class="grid-2">
+                    <div class="input-group">
+                        <label>Monto Deseado ($ / USDT)</label>
+                        <input type="number" step="10" id="usdtMontoDeseado" value="100" oninput="calcularUSDTPro()">
+                    </div>
+                    <div class="input-group">
+                        <label>Comisión de Gestión (%)</label>
+                        <input type="number" step="0.5" id="usdtComisionPct" value="8" oninput="calcularUSDTPro()">
+                    </div>
+                </div>
+                <div id="usdtResultadosPro" class="result-box" style="border-color: rgba(245, 158, 11, 0.3);"></div>
+                <button onclick="ejecutarUSDTPro()" class="btn-main" style="background: var(--accent-amber);">Registrar Operación USDT</button>
+            </section>
+        </div>
+
+        <!-- ================= PÁGINA 3: CAJA & AJUSTES ================= -->
+        <div id="pageCaja" class="page-view">
+            <button class="btn-back" onclick="cambiarPagina('pageHome')">⬅️ Volver al Menú</button>
+
+            <div class="tabs">
+                <button onclick="mostrarSubAjuste('entrar')" id="subBtnEntrar" class="tab-btn active">📥 Entradas</button>
+                <button onclick="mostrarSubAjuste('retirar')" id="subBtnRetirar" class="tab-btn">💸 Retiros</button>
+                <button onclick="mostrarSubAjuste('fiados')" id="subBtnFiados" class="tab-btn">🤝 Fiados</button>
+                <button onclick="mostrarSubAjuste('arqueo')" id="subBtnArqueo" class="tab-btn">⚙️ Saldos</button>
+            </div>
+
+            <!-- Entradas -->
+            <section id="subPaneEntrar" class="section-box sub-pane active" style="border-color: rgba(16, 185, 129, 0.3);">
+                <div class="section-title" style="color: var(--accent-green);">📥 <span>Registrar Entrada</span></div>
+                <div class="input-group">
+  
